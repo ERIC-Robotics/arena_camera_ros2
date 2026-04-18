@@ -17,15 +17,15 @@ void ArenaCameraNode::parse_parameters_()
   try {
     nextParameterToDeclare = "serial";
     if (this->has_parameter("serial")) {
-        int serial_integer;
-        this->get_parameter<int>("serial", serial_integer);
-        serial_ = std::to_string(serial_integer);
-        is_passed_serial_ = true;
-} else {
-    serial_ = ""; // Set it to an empty string to indicate it's not passed.
-    is_passed_serial_ = false;
-}
-    
+      int serial_integer;
+      this->get_parameter<int>("serial", serial_integer);
+      serial_ = std::to_string(serial_integer);
+      is_passed_serial_ = true;
+    } else {
+      serial_ = "";  // Set it to an empty string to indicate it's not passed.
+      is_passed_serial_ = false;
+    }
+
     nextParameterToDeclare = "pixelformat";
     pixelformat_ros_ = this->declare_parameter("pixelformat", "");
     is_passed_pixelformat_ros_ = pixelformat_ros_ != "";
@@ -42,13 +42,25 @@ void ArenaCameraNode::parse_parameters_()
     gain_ = this->declare_parameter("gain", -1.0);
     is_passed_gain_ = gain_ >= 0;
 
+    nextParameterToDeclare = "gain_auto";
+    gain_auto_ = this->declare_parameter("gain_auto", "");
+    is_passed_gain_auto_ = gain_auto_ != "";
+
     nextParameterToDeclare = "exposure_time";
     exposure_time_ = this->declare_parameter("exposure_time", -1.0);
     is_passed_exposure_time_ = exposure_time_ >= 0;
 
+    nextParameterToDeclare = "exposure_auto";
+    exposure_auto_ = this->declare_parameter("exposure_auto", "");
+    is_passed_exposure_auto_ = exposure_auto_ != "";
+
     nextParameterToDeclare = "trigger_mode";
     trigger_mode_activated_ = this->declare_parameter("trigger_mode", false);
     // no need to is_passed_trigger_mode_ because it is already a boolean
+
+    nextParameterToDeclare = "white_balance_auto";
+    white_balance_auto_ = this->declare_parameter("white_balance_auto", "");
+    is_passed_white_balance_auto_ = white_balance_auto_ != "";
 
     nextParameterToDeclare = "topic";
     topic_ = this->declare_parameter(
@@ -67,7 +79,7 @@ void ArenaCameraNode::parse_parameters_()
     pub_qos_reliability_ = this->declare_parameter("qos_reliability", "");
     is_passed_pub_qos_reliability_ = pub_qos_reliability_ != "";
 
-  } catch (rclcpp::ParameterTypeException& e) {
+  } catch (rclcpp::ParameterTypeException & e) {
     log_err(nextParameterToDeclare + " argument");
     throw;
   }
@@ -79,7 +91,7 @@ void ArenaCameraNode::initialize_()
   // ARENASDK ---------------------------------------------------------------
   // Custom deleter for system
   m_pSystem =
-      std::shared_ptr<Arena::ISystem>(nullptr, [=](Arena::ISystem* pSystem) {
+      std::shared_ptr<Arena::ISystem>(nullptr, [=](Arena::ISystem * pSystem) {
         if (pSystem) {  // this is an issue for multi devices
           Arena::CloseSystem(pSystem);
           log_info("System is destroyed");
@@ -89,7 +101,7 @@ void ArenaCameraNode::initialize_()
 
   // Custom deleter for device
   m_pDevice =
-      std::shared_ptr<Arena::IDevice>(nullptr, [=](Arena::IDevice* pDevice) {
+      std::shared_ptr<Arena::IDevice>(nullptr, [=](Arena::IDevice * pDevice) {
         if (m_pSystem && pDevice) {
           m_pSystem->DestroyDevice(pDevice);
           log_info("Device is destroyed");
@@ -234,7 +246,7 @@ void ArenaCameraNode::run_()
 
 void ArenaCameraNode::publish_images_()
 {
-  Arena::IImage* pImage = nullptr;
+  Arena::IImage * pImage = nullptr;
   while (rclcpp::ok()) {
     try {
       auto p_image_msg = std::make_unique<sensor_msgs::msg::Image>();
@@ -246,20 +258,29 @@ void ArenaCameraNode::publish_images_()
       log_info(std::string("image ") + std::to_string(pImage->GetFrameId()) +
                " published to " + topic_);
       this->m_pDevice->RequeueBuffer(pImage);
+      pImage = nullptr;
 
-    } catch (std::exception& e) {
+    } catch (std::exception & e) {
       if (pImage) {
         this->m_pDevice->RequeueBuffer(pImage);
         pImage = nullptr;
-        log_warn(std::string("Exception occurred while publishing an image\n") +
-                 e.what());
       }
+      log_warn(std::string("Exception occurred while publishing an image\n") +
+               e.what());
+    } catch (GenICam::GenericException & e) {
+      if (pImage) {
+        this->m_pDevice->RequeueBuffer(pImage);
+        pImage = nullptr;
+      }
+      log_warn(std::string("GenICam Exception (Timeout) occurred while "
+                           "grabbing an image\n") +
+               e.what());
     }
   };
 }
 
-void ArenaCameraNode::msg_form_image_(Arena::IImage* pImage,
-                                      sensor_msgs::msg::Image& image_msg)
+void ArenaCameraNode::msg_form_image_(Arena::IImage * pImage,
+                                      sensor_msgs::msg::Image & image_msg)
 {
   try {
     // 1 ) Header
@@ -333,7 +354,7 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
 
   log_info("A client triggered an image request");
 
-  Arena::IImage* pImage = nullptr;
+  Arena::IImage * pImage = nullptr;
   try {
     // trigger
     bool triggerArmed = false;
@@ -369,7 +390,7 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
 
   }
 
-  catch (std::exception& e) {
+  catch (std::exception & e) {
     if (pImage) {
       this->m_pDevice->RequeueBuffer(pImage);
       pImage = nullptr;
@@ -382,7 +403,7 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
 
   }
 
-  catch (GenICam::GenericException& e) {
+  catch (GenICam::GenericException & e) {
     if (pImage) {
       this->m_pDevice->RequeueBuffer(pImage);
       pImage = nullptr;
@@ -396,7 +417,7 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
   }
 }
 
-Arena::IDevice* ArenaCameraNode::create_device_ros_()
+Arena::IDevice * ArenaCameraNode::create_device_ros_()
 {
   m_pSystem->UpdateDevices(100);  // in millisec
   auto device_infos = m_pSystem->GetDevices();
@@ -425,11 +446,14 @@ void ArenaCameraNode::set_nodes_()
   set_nodes_pixelformat_();
   set_nodes_exposure_();
   set_nodes_trigger_mode_();
+  set_nodes_white_balance_();
   // configure Auto Negotiate Packet Size and Packet Resend
-  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamAutoNegotiatePacketSize", True);
-  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(), "StreamPacketResendEnable", True);
+  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(),
+                            "StreamAutoNegotiatePacketSize", true);
+  Arena::SetNodeValue<bool>(m_pDevice->GetTLStreamNodeMap(),
+                            "StreamPacketResendEnable", true);
 
-  //set_nodes_test_pattern_image_();
+  // set_nodes_test_pattern_image_();
 }
 
 void ArenaCameraNode::set_nodes_load_default_profile_()
@@ -468,8 +492,18 @@ void ArenaCameraNode::set_nodes_roi_()
 
 void ArenaCameraNode::set_nodes_gain_()
 {
+  auto nodemap = m_pDevice->GetNodeMap();
+  if (is_passed_gain_auto_) {
+    try {
+      Arena::SetNodeValue<GenICam::gcstring>(nodemap, "GainAuto",
+                                             gain_auto_.c_str());
+      log_info(std::string("\tGainAuto set to ") + gain_auto_);
+    } catch (GenICam::GenericException & e) {
+      log_warn(std::string("Failed to set GainAuto: ") + e.what());
+    }
+  }
+
   if (is_passed_gain_) {  // not default
-    auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<double>(nodemap, "Gain", gain_);
     log_info(std::string("\tGain set to ") + std::to_string(gain_));
   }
@@ -492,7 +526,7 @@ void ArenaCameraNode::set_nodes_pixelformat_()
                                              pixelformat_pfnc_.c_str());
       log_info(std::string("\tPixelFormat set to ") + pixelformat_pfnc_);
 
-    } catch (GenICam::GenericException& e) {
+    } catch (GenICam::GenericException & e) {
       // TODO
       // an rcl expectation might be expected
       auto x = std::string("pixelformat is not supported by this camera");
@@ -516,8 +550,18 @@ void ArenaCameraNode::set_nodes_pixelformat_()
 
 void ArenaCameraNode::set_nodes_exposure_()
 {
+  auto nodemap = m_pDevice->GetNodeMap();
+  if (is_passed_exposure_auto_) {
+    try {
+      Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto",
+                                             exposure_auto_.c_str());
+      log_info(std::string("\tExposureAuto set to ") + exposure_auto_);
+    } catch (GenICam::GenericException & e) {
+      log_warn(std::string("Failed to set ExposureAuto: ") + e.what());
+    }
+  }
+
   if (is_passed_exposure_time_) {
-    auto nodemap = m_pDevice->GetNodeMap();
     Arena::SetNodeValue<GenICam::gcstring>(nodemap, "ExposureAuto", "Off");
     Arena::SetNodeValue<double>(nodemap, "ExposureTime", exposure_time_);
   }
@@ -557,6 +601,20 @@ void ArenaCameraNode::set_nodes_trigger_mode_()
   // the user default profile
   else {
     Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TriggerMode", "Off");
+  }
+}
+
+void ArenaCameraNode::set_nodes_white_balance_()
+{
+  if (is_passed_white_balance_auto_) {
+    auto nodemap = m_pDevice->GetNodeMap();
+    try {
+      Arena::SetNodeValue<GenICam::gcstring>(nodemap, "BalanceWhiteAuto",
+                                             white_balance_auto_.c_str());
+      log_info(std::string("\tBalanceWhiteAuto set to ") + white_balance_auto_);
+    } catch (GenICam::GenericException & e) {
+      log_warn(std::string("Failed to set BalanceWhiteAuto: ") + e.what());
+    }
   }
 }
 

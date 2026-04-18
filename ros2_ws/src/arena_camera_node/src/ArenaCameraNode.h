@@ -39,10 +39,22 @@ class ArenaCameraNode : public rclcpp::Node
     log_info(std::string("Destroying \"") + this->get_name() + "\" node");
   }
 
-  void log_debug(std::string msg) { RCLCPP_DEBUG(this->get_logger(), msg.c_str()); };
-  void log_info(std::string msg) { RCLCPP_INFO(this->get_logger(), msg.c_str()); };
-  void log_warn(std::string msg) { RCLCPP_WARN(this->get_logger(), msg.c_str()); };
-  void log_err(std::string msg) { RCLCPP_ERROR(this->get_logger(), msg.c_str()); };
+  void log_debug(std::string msg)
+  {
+    RCLCPP_DEBUG(this->get_logger(), msg.c_str());
+  };
+  void log_info(std::string msg)
+  {
+    RCLCPP_INFO(this->get_logger(), msg.c_str());
+  };
+  void log_warn(std::string msg)
+  {
+    RCLCPP_WARN(this->get_logger(), msg.c_str());
+  };
+  void log_err(std::string msg)
+  {
+    RCLCPP_ERROR(this->get_logger(), msg.c_str());
+  };
 
  private:
   std::shared_ptr<Arena::ISystem> m_pSystem;
@@ -65,15 +77,22 @@ class ArenaCameraNode : public rclcpp::Node
 
   double gain_;
   bool is_passed_gain_;
+  std::string gain_auto_;
+  bool is_passed_gain_auto_;
 
   double exposure_time_;
   bool is_passed_exposure_time_;
+  std::string exposure_auto_;
+  bool is_passed_exposure_auto_;
 
   std::string pixelformat_pfnc_;
   std::string pixelformat_ros_;
   bool is_passed_pixelformat_ros_;
 
   bool trigger_mode_activated_;
+
+  std::string white_balance_auto_;
+  bool is_passed_white_balance_auto_;
 
   std::string pub_qos_history_;
   bool is_passed_pub_qos_history_;
@@ -92,7 +111,7 @@ class ArenaCameraNode : public rclcpp::Node
   void run_();
   // TODO :
   // - handle misconfigured device
-  Arena::IDevice* create_device_ros_();
+  Arena::IDevice * create_device_ros_();
   void set_nodes_();
   void set_nodes_load_default_profile_();
   void set_nodes_roi_();
@@ -100,12 +119,13 @@ class ArenaCameraNode : public rclcpp::Node
   void set_nodes_pixelformat_();
   void set_nodes_exposure_();
   void set_nodes_trigger_mode_();
+  void set_nodes_white_balance_();
   void set_nodes_test_pattern_image_();
   void publish_images_();
 
   void publish_an_image_on_trigger_(
       std::shared_ptr<std_srvs::srv::Trigger::Request> request,
       std::shared_ptr<std_srvs::srv::Trigger::Response> response);
-  void msg_form_image_(Arena::IImage* pImage,
-                       sensor_msgs::msg::Image& image_msg);
+  void msg_form_image_(Arena::IImage * pImage,
+                       sensor_msgs::msg::Image & image_msg);
 };
