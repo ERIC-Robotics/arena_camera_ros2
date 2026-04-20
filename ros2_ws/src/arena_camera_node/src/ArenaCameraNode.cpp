@@ -16,9 +16,8 @@ void ArenaCameraNode::parse_parameters_()
   std::string nextParameterToDeclare = "";
   try {
     nextParameterToDeclare = "serial";
-    if (this->has_parameter("serial")) {
-      int serial_integer;
-      this->get_parameter<int>("serial", serial_integer);
+    int serial_integer = this->declare_parameter("serial", 0);
+    if (serial_integer != 0) {
       serial_ = std::to_string(serial_integer);
       is_passed_serial_ = true;
     } else {
@@ -419,23 +418,42 @@ void ArenaCameraNode::publish_an_image_on_trigger_(
 
 Arena::IDevice * ArenaCameraNode::create_device_ros_()
 {
-  m_pSystem->UpdateDevices(100);  // in millisec
-  auto device_infos = m_pSystem->GetDevices();
-  if (!device_infos.size()) {
-    // TODO: handel disconnection
-    throw std::runtime_error(
-        "camera(s) were disconnected after they were discovered");
-  }
+  try {
+    log_info("create_device_ros_ step 1: UpdateDevices");
+    m_pSystem->UpdateDevices(100);  // in millisec
 
-  auto index = 0;
-  if (is_passed_serial_) {
-    index = DeviceInfoHelper::get_index_of_serial(device_infos, serial_);
-  }
+    log_info("create_device_ros_ step 2: GetDevices");
+    auto device_infos = m_pSystem->GetDevices();
+    if (!device_infos.size()) {
+      throw std::runtime_error(
+          "camera(s) were disconnected after they were discovered");
+    }
 
-  auto pDevice = m_pSystem->CreateDevice(device_infos.at(index));
-  log_info(std::string("device created ") +
-           DeviceInfoHelper::info(device_infos.at(index)));
-  return pDevice;
+    auto index = 0;
+    if (is_passed_serial_) {
+      log_info("create_device_ros_ step 3: get_index_of_serial");
+      index = DeviceInfoHelper::get_index_of_serial(device_infos, serial_);
+    }
+
+    log_info("create_device_ros_ step 4: CreateDevice");
+    auto pDevice = m_pSystem->CreateDevice(device_infos.at(index));
+
+    log_info("create_device_ros_ step 5: info");
+    log_info(std::string("device created ") +
+             DeviceInfoHelper::info(device_infos.at(index)));
+    return pDevice;
+  } catch (const GenICam::GenericException & e) {
+    log_warn(std::string("GenICam Exception inside create_device_ros_: ") +
+             e.what());
+    throw;
+  } catch (const std::exception & e) {
+    log_warn(std::string("std::exception inside create_device_ros_: ") +
+             e.what());
+    throw;
+  } catch (...) {
+    log_warn("Unknown exception inside create_device_ros_");
+    throw;
+  }
 }
 
 void ArenaCameraNode::set_nodes_()
