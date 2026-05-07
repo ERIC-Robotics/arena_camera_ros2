@@ -4,10 +4,8 @@
 int main(int argc, char* argv[])
 {
   rclcpp::init(argc, argv);
-  {
-    auto node = std::make_shared<ArenaCameraNode>();
-    rclcpp::spin(node);
-  }
+  auto node = std::make_shared<ArenaCameraNode>(rclcpp::NodeOptions());
+  rclcpp::spin(node);
   rclcpp::shutdown();
   return 0;
 }

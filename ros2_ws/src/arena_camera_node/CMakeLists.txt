@@ -44,6 +44,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/")
 # - even if a dependency is used in one package, it has to be found
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(sensor_msgs REQUIRED)
@@ -102,15 +103,13 @@ find_package(arena_sdk REQUIRED)
 
 # -----------------------------------------------------------------------------
 #
-# ROS2 RUN ARENA_CAMERA_NODE <>
+# ROS2 COMPOSABLE NODE - ARENA_CAMERA_NODE
 #
 # -----------------------------------------------------------------------------
 
-set(target_name start)
+set(target_name_lib arena_camera_node_component)
 
-# CPP DEPS
-add_executable(${target_name}
-    src/main.cpp
+add_library(${target_name_lib} SHARED
     src/ArenaCameraNode.cpp
     src/light_arena/deviceinfo_helper.cpp
     src/rclcpp_adapter/pixelformat_translation.cpp
@@ -135,21 +134,60 @@ add_executable(${target_name}
 # EXPORT .a file for other pakges ?
 #ament_export_libraries(${PROJECT_NAME} ${rclcpp_LIBRARIES})
 
-# ROS DEP
-# - this way, it will find our header libs automatically
-# - for Arenasdk the cmake way is used no ament
-ament_target_dependencies(${target_name}  rclcpp 
-                                          std_msgs 
-                                          std_srvs
-                                          sensor_msgs
-                                          arena_sdk
-                                          )
+ament_target_dependencies(${target_name_lib}
+                          rclcpp
+                          rclcpp_components
+                          std_msgs
+                          std_srvs
+                          sensor_msgs
+                          arena_sdk)
 
+install(TARGETS
+  ${target_name_lib}
+    ARCHIVE DESTINATION lib
+    LIBRARY DESTINATION lib
+    RUNTIME DESTINATION bin
+)
+
+rclcpp_components_register_nodes(${target_name_lib} "ArenaCameraNode")
+
+# -----------------------------------------------------------------------------
+#
+# ROS2 RUN ARENA_CAMERA_NODE <>
+#
+# -----------------------------------------------------------------------------
+
+set(target_name start)
+
+add_executable(${target_name}
+    src/main.cpp
+)
+
+target_link_libraries(${target_name}
+  ${target_name_lib}
+)
+
+ament_target_dependencies(${target_name}
+                          rclcpp
+                          std_msgs
+                          std_srvs
+                          sensor_msgs
+                          arena_sdk)
 
 # MV EXEC to lib dir
 install(TARGETS
   ${target_name} 
     DESTINATION lib/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  src/launch
+  DESTINATION share/${PROJECT_NAME}
+)
+
+install(DIRECTORY
+  src/config
+  DESTINATION share/${PROJECT_NAME}
 )
 
 # -----------------------------------------------------------------------------

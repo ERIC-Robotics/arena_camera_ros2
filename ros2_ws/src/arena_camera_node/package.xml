@@ -9,6 +9,8 @@
   <maintainer email="support@thinklucid.com">LUCID Vision Labs</maintainer>
   <license>MIT</license>
 
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
 
   <!-- 
     NEEDED FOR MULTIPLE REASONS/STAGES
@@ -21,8 +23,12 @@
 
   -->
   <depend>rclcpp</depend>
+  <depend>rclcpp_components</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>launch_ros</depend>
+  <depend>ament_index_python</depend>
 
 
 
@@ -57,5 +63,12 @@
 
   <export>
     <build_type>ament_cmake</build_type>
+    <ros2_components>
+      <component>
+        <library_name>arena_camera_node_component</library_name>
+        <class_name>ArenaCameraNode</class_name>
+        <description>Arena Camera ROS2 Node for publishing images from Lucid Vision cameras</description>
+      </component>
+    </ros2_components>
   </export>
 </package>

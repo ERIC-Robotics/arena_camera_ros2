@@ -4,6 +4,7 @@
 
 // ROS
 #include "rmw/types.h"
+#include <rclcpp_components/register_node_macro.hpp>
 
 // ArenaSDK
 #include "ArenaCameraNode.h"
@@ -642,3 +643,5 @@ void ArenaCameraNode::set_nodes_test_pattern_image_()
   auto nodemap = m_pDevice->GetNodeMap();
   Arena::SetNodeValue<GenICam::gcstring>(nodemap, "TestPattern", "Pattern3");
 }
+
+RCLCPP_COMPONENTS_REGISTER_NODE(ArenaCameraNode)

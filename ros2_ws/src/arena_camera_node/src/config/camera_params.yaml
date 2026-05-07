@@ -1,0 +1,17 @@
+  ros__parameters:
+    # serial: 254400443   #right cam
+    serial: 254400442     #left cam
+    width: 0
+    height: 0
+    pixelformat: "bgr8"
+    gain: -1.0
+    gain_auto: "continous"
+    exposure_time: -1.0
+    exposure_auto: ""
+    trigger_mode: false
+    white_balance_auto: ""
+    # topic: "/arena_camera_node/down_right"
+    topic: "/arena_camera_node/down_left"
+    qos_history: ""
+    qos_history_depth: 5
+    qos_reliability: "best_effort"
